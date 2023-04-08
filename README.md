@@ -1,2 +1,3 @@
 # iNetBox
-Deterministic simulation engine designed for multiplayer games. It includes a rollback feature.
+
+A description of this package.

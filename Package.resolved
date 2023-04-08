@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "ispace",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/iShape-Swift/iSpace",
+      "state" : {
+        "revision" : "8eb966845bebe972b848be9d62050d3ca081ae9c",
+        "version" : "0.1.0"
+      }
+    }
+  ],
+  "version" : 2
+}
