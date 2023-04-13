@@ -7,8 +7,10 @@
 
 import iSpace
 
-public struct BoundryBox {
+public struct BoundaryBox {
 
+    public static let zero = BoundaryBox(pMin: .zero, pMax: .zero)
+    
     public let pMin: FixVec
     public let pMax: FixVec
     
@@ -16,6 +18,12 @@ public struct BoundryBox {
     public init(pMin: FixVec, pMax: FixVec) {
         self.pMin = pMin
         self.pMax = pMax
+    }
+
+    @inlinable
+    public init(radius: FixFloat) {
+        self.pMin = FixVec(-radius, -radius)
+        self.pMax = FixVec(radius, radius)
     }
     
     @inlinable
@@ -50,18 +58,22 @@ public struct BoundryBox {
         self.pMax = FixVec(maxX, maxY)
     }
 
+    public func translate(delta: FixVec) -> BoundaryBox {
+        BoundaryBox(pMin: pMin + delta, pMax: pMax + delta)
+    }
+    
     @inlinable
-    public func union(_ box: BoundryBox) -> BoundryBox {
+    public func union(_ box: BoundaryBox) -> BoundaryBox {
         let minX = min(pMin.x, box.pMin.x)
         let minY = min(pMin.y, box.pMin.y)
         let maxX = max(pMax.x, box.pMax.x)
         let maxY = max(pMax.y, box.pMax.y)
         
-        return BoundryBox(pMin: FixVec(minX, minY), pMax: FixVec(maxX, maxY))
+        return BoundaryBox(pMin: FixVec(minX, minY), pMax: FixVec(maxX, maxY))
     }
     
     @inlinable
-    public func isCollide(box: BoundryBox) -> Bool {
+    public func isCollide(box: BoundaryBox) -> Bool {
         // Check if the bounding boxes intersect in any dimension
         if pMax.x < box.pMin.x || pMin.x > box.pMax.x {
             return false
@@ -72,19 +84,15 @@ public struct BoundryBox {
         return true
     }
 
-    
     @inlinable
-    public func isCollide(circle: BoundryCircle) -> Bool {
+    public func isCollideCircle(center: FixVec, radius: FixFloat) -> Bool {
         // Compute the closest point to the circle center within the box
-        let closestX = max(pMin.x, min(circle.center.x, pMax.x))
-        let closestY = max(pMin.y, min(circle.center.y, pMax.y))
-        
-        // Check if the distance from the closest point to the circle center is less than the circle radius
-        let dx = closestX - circle.center.x
-        let dy = closestY - circle.center.y
-        let distanceSquared = dx.sqr + dy.sqr
+        let cx = max(pMin.x, min(center.x, pMax.x))
+        let cy = max(pMin.y, min(center.y, pMax.y))
 
-        return distanceSquared <= circle.sqrRadius
+        let sqrDist = FixVec(cx, cy).sqrDistance(center)
+
+        return sqrDist <= radius.sqr
     }
 
 }

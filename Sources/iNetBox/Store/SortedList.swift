@@ -17,8 +17,13 @@ struct SortedList<T: IdItem> {
     private var ids: [Int64] = []
     var items: [T] = []
     
+    @inlinable
+    func index(id: Int64) -> Int {
+        ids.findIndex(value: id)
+    }
+    
     mutating func add(_ item: T) {
-        guard ids.isEmpty else {
+        guard !ids.isEmpty else {
             ids.append(item.id)
             items.append(item)
             return

@@ -7,9 +7,16 @@
 
 import iSpace
 
-struct Shape {
+public struct Shape {
     
-    let pos: FixVec
-    let collider: Collider
+    static let empty = Shape(transform: .zero, boundry: .zero, collider: .empty)
 
+    public var transform: Transform
+    public private (set) var boundry: BoundaryBox
+    public var collider: Collider
+    
+    mutating func revalidateBoundary() {
+        boundry = transform.toWorld(boundary: collider.boundry)
+    }
+    
 }

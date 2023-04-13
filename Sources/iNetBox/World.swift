@@ -9,21 +9,14 @@ import iSpace
 
 public struct WorldSettings {
     
-    let timeScale: Int = 4
+    let timeScale: Int = 4 // 2^4
     
-    let bodyTimeScale: Int = 2
-    
-    let bodyRatio: Int
+    let bodyTimeScale: Int = 2 // 2^2
     
     let isBvB = false
     let isPvP = false
     
     let playerRadius: FixFloat = .unit
-    
-    init() {
-        bodyRatio = timeScale / bodyTimeScale
-    }
-
 }
 
 public struct World {
@@ -35,28 +28,28 @@ public struct World {
     var landList = SortedList<Land>()
 
     var complexColliders = [Int64: ComplexCollider]()
+    var convexColliders = [Int64: ConvexCollider]()
     var time: Int64
 
-    mutating func iterate() {
-        let timeScale = settings.timeScale
+    public init(time: Int64) {
+        self.time = time
+    }
+    
+    public mutating func iterate() {
+        let timeScale = 10 - settings.timeScale
         
-        var  i = 0
+        var i = 0
 
         // update lands first
         
         while i < landList.items.count {
             var land = landList.items[i]
-            if !land.isStatic {
+            if !land.velocity.isZero {
+                var shape = land.shape
+                shape.transform = shape.transform.apply(velocity: land.velocity, timeScale: timeScale)
+                shape.revalidateBoundary()
                 
-                let x = land.pos.x + land.vel.x << timeScale
-                let y = land.pos.y + land.vel.y << timeScale
-                
-                land.pos = FixVec(x, y)
-                
-                if land.rotVel != 0 {
-                    land.angle = land.angle + land.rotVel << timeScale
-                }
-                
+                land.shape = shape
                 landList.items[i] = land
                 
                 // TODO update colliders
@@ -66,14 +59,14 @@ public struct World {
         
         // update players
         
-        let playerTimeScale = settings.bodyTimeScale
-        var playerRatio = settings.bodyRatio
+        let bodyTimeScale = 10 - settings.bodyTimeScale
+        let bodySteps = 1 << (settings.timeScale - settings.bodyTimeScale)
         
         var s = 0
         let plCount = playerList.items.count
         let btCount = bulletList.items.count
 
-        while s < playerRatio {
+        while s < bodySteps {
             s += 1
             
             // update players
@@ -83,15 +76,20 @@ public struct World {
             while j < plCount {
                 var player = playerList.items[j]
 
-                let x = player.pos.x + player.vel.x << playerTimeScale
-                let y = player.pos.y + player.vel.y << playerTimeScale
+                var shape = player.shape
+                shape.transform = shape.transform.apply(velocity: player.velocity, timeScale: bodyTimeScale)
+                shape.revalidateBoundary()
                 
-                player.pos = FixVec(x, y)
-                player.angle = player.angle + player.rotVel << playerTimeScale
-
+                player.shape = shape
                 playerList.items[j] = player
                 
                 // TODO collide with land
+                
+                i = 0
+                while i < landList.items.count {
+                    self.collide(index: j, player, landList.items[i])
+                    i += 1
+                }
 
                 j += 1
             }
@@ -101,15 +99,15 @@ public struct World {
             j = 0
             
             while j < btCount {
-                var bullet = playerList.items[j]
-
-                let x = bullet.pos.x + bullet.vel.x << playerTimeScale
-                let y = bullet.pos.y + bullet.vel.y << playerTimeScale
+                var bullet = bulletList.items[j]
                 
-                bullet.pos = FixVec(x, y)
-                bullet.angle = bullet.angle + bullet.rotVel << playerTimeScale
+                var shape = bullet.shape
+                shape.transform = shape.transform.apply(velocity: bullet.velocity, timeScale: bodyTimeScale)
+                shape.revalidateBoundary()
+                
+                bullet.shape = shape
 
-                playerList.items[j] = bullet
+                bulletList.items[j] = bullet
                 
                 // TODO collide with land
 
@@ -129,7 +127,16 @@ public struct World {
                         
                         // collide with player
                         
-                        plA
+                        let contact = self.collide(shapeA: plA.shape, shapeB: plB.shape)
+                        switch contact.type {
+                        case .inside:
+                            break
+                        case .collide:
+                            break
+                        default:
+                            break
+                        }
+                        
                         
                         i += 1
                     }
@@ -141,9 +148,32 @@ public struct World {
             // collide bullet vs player
             
             if plCount > 0 && btCount > 0 {
-                
-                
-                
+                j = 0
+                // TODO optimize
+                while j < plCount - 1 {
+                    var plA = playerList.items[j]
+                    var i = j + 1
+                    while i < btCount {
+                        var btA = bulletList.items[i]
+                        
+                        // collide with player
+                        
+                        let contact = self.collide(shapeA: plA.shape, shapeB: btA.shape)
+                        switch contact.type {
+                        case .inside:
+                            break
+                        case .collide:
+                            break
+                        default:
+                            break
+                        }
+                        
+                        
+                        i += 1
+                    }
+                    
+                    j += 1
+                }
             }
             
             // collide bullet vs bullet
@@ -151,15 +181,23 @@ public struct World {
             if settings.isBvB && btCount > 1 {
                 j = 0
                 // TODO optimize
-                while j < plCount - 1 {
-                    var plA = playerList.items[j]
+                while j < btCount - 1 {
+                    var btA = bulletList.items[j]
                     var i = j + 1
-                    while i < plCount {
-                        var plB = playerList.items[i]
+                    while i < btCount {
+                        var btB = bulletList.items[i]
                         
                         // collide with player
+                        let contact = self.collide(shapeA: btA.shape, shapeB: btB.shape)
+                        switch contact.type {
+                        case .inside:
+                            break
+                        case .collide:
+                            break
+                        default:
+                            break
+                        }
                         
-                        plA
                         
                         i += 1
                     }
@@ -172,12 +210,117 @@ public struct World {
     }
     
     
-    mutating func addBody(_ body: Body) {
+    public mutating func add(body: Body) {
         playerList.add(body)
     }
 
-    func addLand(body: Body, collider: ComplexCollider) {
-        
+    public mutating func add(land: Land) {
+        landList.add(land)
     }
     
+    public func getBody(id: Int64) -> Body {
+        let index = playerList.index(id: id)
+        return playerList.items[index]
+    }
+    
+    public func getLand(id: Int64) -> Land {
+        let index = landList.index(id: id)
+        return landList.items[index]
+    }
+    
+    // set collider
+    
+    public mutating func setPlayerCollider(circleRadius: FixFloat, playerId: Int64) {
+        let index = playerList.index(id: playerId)
+        
+        var shape = playerList.items[index].shape
+        shape.collider = Collider(boundry: BoundaryBox(radius: circleRadius), form: .circle, data: circleRadius)
+        shape.revalidateBoundary()
+        playerList.items[index].shape = shape
+    }
+    
+    public mutating func setBulletCollider(circleRadius: FixFloat, bulletId: Int64) {
+        let index = bulletList.index(id: bulletId)
+        
+        var shape = bulletList.items[index].shape
+        shape.collider = Collider(boundry: BoundaryBox(radius: circleRadius), form: .circle, data: circleRadius)
+        shape.revalidateBoundary()
+        bulletList.items[index].shape = shape
+    }
+
+    public mutating func setLandCollider(circleRadius: FixFloat, landId: Int64) {
+        let landId = landList.index(id: landId)
+        
+        var shape = landList.items[landId].shape
+        shape.collider = Collider(boundry: BoundaryBox(radius: circleRadius), form: .circle, data: circleRadius)
+        shape.revalidateBoundary()
+        
+        landList.items[landId].shape = shape
+    }
+
+    public mutating func setLandCollider(convex: ConvexCollider, landId: Int64) {
+        let index = landList.index(id: landId)
+        
+        convexColliders[landId] = convex
+        var shape = landList.items[index].shape
+        shape.collider = Collider(boundry: convex.box, form: .convex, data: landId)
+        shape.revalidateBoundary()
+        
+        landList.items[index].shape = shape
+    }
+    
+    // set position
+
+    public mutating func setPlayer(position: FixVec, angle: FixFloat, playerId: Int64) {
+        let index = playerList.index(id: playerId)
+        
+        var shape = playerList.items[index].shape
+        shape.transform = Transform(position: position, angle: angle)
+        shape.revalidateBoundary()
+        
+        playerList.items[index].shape = shape
+    }
+
+    public mutating func setBullet(position: FixVec, angle: FixFloat, bulletId: Int64) {
+        let index = bulletList.index(id: bulletId)
+        
+        var shape = bulletList.items[index].shape
+        shape.transform = Transform(position: position, angle: angle)
+        shape.revalidateBoundary()
+        
+        bulletList.items[index].shape = shape
+    }
+    
+    public mutating func setLand(position: FixVec, angle: FixFloat, landId: Int64) {
+        let index = landList.index(id: landId)
+        
+        var shape = landList.items[index].shape
+        shape.transform = Transform(position: position, angle: angle)
+        shape.revalidateBoundary()
+        
+        landList.items[index].shape = shape
+    }
+    
+    // set velocity
+
+    public mutating func setPlayer(velocity: Velocity, playerId: Int64) {
+        let index = playerList.index(id: playerId)
+        var body = playerList.items[index]
+        body.velocity = velocity
+        playerList.items[index] = body
+    }
+
+    public mutating func setBullet(velocity: Velocity, bulletId: Int64) {
+        let index = bulletList.index(id: bulletId)
+        var body = bulletList.items[index]
+        body.velocity = velocity
+        bulletList.items[index] = body
+    }
+    
+    public mutating func setLand(velocity: Velocity, landId: Int64) {
+        let index = landList.index(id: landId)
+        var land = landList.items[index]
+        land.velocity = velocity
+        landList.items[index] = land
+    }
 }

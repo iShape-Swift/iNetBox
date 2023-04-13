@@ -7,19 +7,25 @@
 
 import iSpace
 
+public enum BodyType {
+    case player
+    case bullet
+}
+
 public struct Body: IdItem {
     
     public let id: Int64
-    public let isBullet: Bool
-    public let isPlayer: Bool
+    public let type: BodyType
 
-    var vel: FixVec
-    var pos: FixVec
+    public internal (set) var shape: Shape = .empty
+    public internal (set) var mass: FixFloat
+    public internal (set) var velocity: Velocity = .zero
+    public internal (set) var material: Material = .normal
     
-    var rotVel: FixFloat
-    var angle: FixFloat
+    public init(id: Int64, type: BodyType, mass: FixFloat) {
+        self.id = id
+        self.type = type
+        self.mass = mass
+    }
     
-    var mass: FixFloat
-    var collider: Collider
-
 }
