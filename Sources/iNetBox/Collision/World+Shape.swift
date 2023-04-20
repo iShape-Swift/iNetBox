@@ -20,9 +20,9 @@ extension World {
             case .circle:
                 return collide(circle: a, circle: b)
             case .convex:
-                return collide(convex: b, circle: a).swapNormal()
+                return collide(convex: b, circle: a).swap()
             case .complex:
-                return collide(complex: b, circle: a).swapNormal()
+                return collide(complex: b, circle: a).swap()
             case .empty:
                 return .outside
             }

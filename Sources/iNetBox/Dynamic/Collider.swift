@@ -17,7 +17,7 @@ public struct Collider {
     
     public static let empty = Collider(boundry: .zero, form: .empty,  data: 0)
     
-    public let boundry: BoundaryBox
+    public let boundry: Boundary
     public let form: ColliderForm
     public let data: Int64          // id, radius
 }

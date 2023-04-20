@@ -7,9 +7,9 @@
 
 import iSpace
 
-public struct BoundaryBox {
+public struct Boundary {
 
-    public static let zero = BoundaryBox(pMin: .zero, pMax: .zero)
+    public static let zero = Boundary(pMin: .zero, pMax: .zero)
     
     public let pMin: FixVec
     public let pMax: FixVec
@@ -57,23 +57,42 @@ public struct BoundaryBox {
         self.pMin = FixVec(minX, minY)
         self.pMax = FixVec(maxX, maxY)
     }
+    
+    @inlinable
+    public init(boxes: [Boundary]) {
+        let n = boxes.count
+        guard n > 0 else {
+            self = Boundary(pMin: .zero, pMax: .zero)
+            return
+        }
+        
+        var boundary = boxes[0]
 
-    public func translate(delta: FixVec) -> BoundaryBox {
-        BoundaryBox(pMin: pMin + delta, pMax: pMax + delta)
+        var i = 1
+
+        while i < n {
+            boundary = boundary.union(boxes[i])
+            i += 1
+        }
+        self = boundary
+    }
+
+    public func translate(delta: FixVec) -> Boundary {
+        Boundary(pMin: pMin + delta, pMax: pMax + delta)
     }
     
     @inlinable
-    public func union(_ box: BoundaryBox) -> BoundaryBox {
+    public func union(_ box: Boundary) -> Boundary {
         let minX = min(pMin.x, box.pMin.x)
         let minY = min(pMin.y, box.pMin.y)
         let maxX = max(pMax.x, box.pMax.x)
         let maxY = max(pMax.y, box.pMax.y)
         
-        return BoundaryBox(pMin: FixVec(minX, minY), pMax: FixVec(maxX, maxY))
+        return Boundary(pMin: FixVec(minX, minY), pMax: FixVec(maxX, maxY))
     }
     
     @inlinable
-    public func isCollide(box: BoundaryBox) -> Bool {
+    public func isCollide(box: Boundary) -> Bool {
         // Check if the bounding boxes intersect in any dimension
         if pMax.x < box.pMin.x || pMin.x > box.pMax.x {
             return false

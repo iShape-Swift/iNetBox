@@ -12,7 +12,7 @@ public struct Shape {
     static let empty = Shape(transform: .zero, boundry: .zero, collider: .empty)
 
     public var transform: Transform
-    public private (set) var boundry: BoundaryBox
+    public private (set) var boundry: Boundary
     public var collider: Collider
     
     mutating func revalidateBoundary() {

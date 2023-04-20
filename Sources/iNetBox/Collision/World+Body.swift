@@ -8,10 +8,6 @@
 import iSpace
 
 extension World {
-    
-    mutating func collide(indexA: Int, _ a: Body, indexB: Int, _ b: Body) {
-        
-    }
 
     mutating func collide(index: Int, _ a: Body, _ b: Land) {
         let contact = collide(shapeA: a.shape, shapeB: b.shape)
@@ -22,13 +18,30 @@ extension World {
         guard v0.y < 0 else {
             return
         }
+
+        let kb = max(a.material.bounce, b.material.bounce)
+        let w = a.velocity.angular.mul(contact.radiusA)
+
+        let vx = v0.x - w
+        let vy = -v0.y.mul(kb)
+
+        let v1 = FixVec(vx, vy)
+
+        let vm = cTrm.toWorld(vector: v1)
+
+        let m = a.velocity.linear.mirror(contact.normalB)
+        
+        print("nol \(contact.normalA)")
+        print("vel \(a.velocity.linear)")
+        
+        print("old \(vm)")
+        print("new \(m)")
+        print("nol vec \(contact.normalA.float)")
+        print("vel vec \(a.velocity.linear.float)")
+        print("mir vec \(a.velocity.linear.float.mirror(contact.normalA.float))")
         
         var new_a = a
-
-        let v1 = FixVec(v0.x, -v0.y)
-        
-        let vw = cTrm.toWorld(vector: v1)
-        new_a.velocity = Velocity(linear: vw, angular: a.velocity.angular)
+        new_a.velocity = Velocity(linear: vm, angular: a.velocity.angular)
 
         switch a.type {
         case .player:

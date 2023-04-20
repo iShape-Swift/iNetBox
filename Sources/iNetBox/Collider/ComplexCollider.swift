@@ -9,7 +9,7 @@ import iSpace
 
 public struct ComplexCollider {
     
-    public var box: BoundaryBox
+    public var box: Boundary
     public var colliders: [ConvexCollider]
     
 

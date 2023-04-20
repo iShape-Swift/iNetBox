@@ -13,7 +13,7 @@ public struct ConvexCollider {
     public let center: FixVec
     public let points: [FixVec]
     public let normals: [FixVec]
-    public let box: BoundaryBox
+    public let box: Boundary
 
     public init(width w: FixFloat, height h: FixFloat) {
         let a = (w + 1) >> 1
@@ -33,7 +33,7 @@ public struct ConvexCollider {
             FixVec(0, -FixFloat.unit)
         ]
 
-        box = BoundaryBox(pMin: FixVec(-a, -b), pMax: FixVec(a, b))
+        box = Boundary(pMin: FixVec(-a, -b), pMax: FixVec(a, b))
     }
 
     public init(points: [FixVec]) {
@@ -52,7 +52,8 @@ public struct ConvexCollider {
             let p1 = points[i]
             let e = p1 - p0
 
-            normals[j] = FixVec(-e.y, e.x).normalize
+            let nm = FixVec(-e.y, e.x).normalize
+            normals[j] = nm
             
             let crossProduct = p1.crossProduct(p0)
             area += crossProduct
@@ -75,7 +76,7 @@ public struct ConvexCollider {
         self.center = FixVec(x, y)
         self.points = points
         self.normals = normals
-        self.box = BoundaryBox(points: points)
+        self.box = Boundary(points: points)
     }
     
     // do not work correct with degenerate points
@@ -126,7 +127,13 @@ public struct ConvexCollider {
         
         // If the center is inside the polygon ...
         if separation < 0 {
-            return Contact(point: faceCenter, normalB: n1, type: .inside)
+            return Contact(
+                point: faceCenter,
+                normalB: n1,
+                radiusA: 0,
+                radiusB: circle.radius,
+                type: .inside
+            )
         }
 
         // Compute barycentric coordinates
@@ -139,7 +146,13 @@ public struct ConvexCollider {
                 return .outside
             }
 
-            return Contact(point: v1, normalB: (circle.center - v1).normalize, type: .collide)
+            return Contact(
+                point: v1,
+                normalB: (circle.center - v1).normalize,
+                radiusA: 0,
+                radiusB: circle.radius,
+                type: .collide
+            )
         }
 
         let u2 = (circle.center - v2).dotProduct(v1 - v2)
@@ -149,7 +162,13 @@ public struct ConvexCollider {
                 return .outside
             }
 
-            return Contact(point: v2, normalB: (circle.center - v2).normalize, type: .collide)
+            return Contact(
+                point: v2,
+                normalB: (circle.center - v2).normalize,
+                radiusA: 0,
+                radiusB: circle.radius,
+                type: .collide
+            )
         }
 
         let s = (circle.center - faceCenter).dotProduct(n1)
@@ -160,7 +179,13 @@ public struct ConvexCollider {
         let d = (circle.center - v2).dotProduct(n1)
         let m = circle.center - d * n1
         
-        return Contact(point: m, normalB: n1, type: .collide)
+        return Contact(
+            point: m,
+            normalB: n1,
+            radiusA: 0,
+            radiusB: circle.radius,
+            type: .collide
+        )
     }
     
 }

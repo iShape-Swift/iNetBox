@@ -5,9 +5,6 @@
 //  Created by Nail Sharipov on 06.04.2023.
 //
 
-// Id
-// tick_clientId_index
-
 public protocol IdItem {
     var id: Int64 { get }
 }

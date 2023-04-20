@@ -56,7 +56,7 @@ public struct Transform {
     }
     
     @inlinable
-    public func toWorld(boundary: BoundaryBox) -> BoundaryBox {
+    public func toWorld(boundary: Boundary) -> Boundary {
         if angle == 0 {
             return boundary.translate(delta: position)
         } else {
@@ -76,7 +76,7 @@ public struct Transform {
             let maxX = max(max(b0.x, b1.x), max(b2.x, b3.x))
             let maxY = max(max(b0.y, b1.y), max(b2.y, b3.y))
             
-            return BoundaryBox(pMin: FixVec(minX, minY), pMax: FixVec(maxX, maxY))
+            return Boundary(pMin: FixVec(minX, minY), pMax: FixVec(maxX, maxY))
         }
     }
     
@@ -85,12 +85,12 @@ public struct Transform {
         let point = toWorld(point: contact.point)
         let normalA = toWorld(vector: contact.normalA)
         
-        return Contact(point: point, normalA: normalA, type: contact.type)
+        return Contact(point: point, normalA: normalA, radiusA: contact.radiusA, radiusB: contact.radiusB, type: contact.type)
     }
     
     
     @inlinable
-    public func apply(velocity v: Velocity, timeScale: Int) -> Transform {
+    public func apply(velocity v: Velocity, timeScale: Int64) -> Transform {
         let dv = v.linear.divTwo(timeScale)
         let p = position + dv
         
@@ -100,6 +100,16 @@ public struct Transform {
         } else {
             return Transform(position: p, angle: angle, rotator: rotator)
         }
+    }
+    
+}
+
+
+extension Transform: Equatable {
+    
+    @inlinable
+    public static func == (lhs: Transform, rhs: Transform) -> Bool {
+        lhs.angle == rhs.angle && lhs.position == rhs.position
     }
     
 }

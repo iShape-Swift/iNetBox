@@ -15,34 +15,37 @@ public enum ContactType {
 
 public struct Contact {
     
-    static let outside = Contact(point: .zero, normalA: .zero, type: .outside)
+    static let outside = Contact(point: .zero, normalA: .zero, radiusA: 0, radiusB: 0, type: .outside)
     
     public let point: FixVec
     public let normalA: FixVec
     public let normalB: FixVec
+    public let radiusA: FixFloat
+    public let radiusB: FixFloat
     public let type: ContactType
-    public let debug: FixVec
     
     @inlinable
-    init(point: FixVec, normalA: FixVec, type: ContactType, debug: FixVec = .zero) {
+    init(point: FixVec, normalA: FixVec, radiusA: FixFloat, radiusB: FixFloat, type: ContactType) {
         self.point = point
         self.normalA = normalA
         self.normalB = FixVec(-normalA.x, -normalA.y)
+        self.radiusA = radiusA
+        self.radiusB = radiusB
         self.type = type
-        self.debug = debug
     }
 
     @inlinable
-    init(point: FixVec, normalB: FixVec, type: ContactType, debug: FixVec = .zero) {
+    init(point: FixVec, normalB: FixVec, radiusA: FixFloat, radiusB: FixFloat, type: ContactType) {
         self.point = point
         self.normalA = FixVec(-normalB.x, -normalB.y)
         self.normalB = normalB
+        self.radiusA = radiusA
+        self.radiusB = radiusB
         self.type = type
-        self.debug = debug
     }
     
     @inlinable
-    func swapNormal() -> Contact {
-        Contact(point: point, normalA: normalB, type: type)
+    func swap() -> Contact {
+        Contact(point: point, normalA: normalB, radiusA: radiusB, radiusB: radiusA, type: type)
     }
 }

@@ -9,9 +9,9 @@ import iSpace
 
 public struct WorldSettings {
     
-    let timeScale: Int = 4 // 2^4
+    let timeScale: Int64 = 4 // 2^4
     
-    let bodyTimeScale: Int = 2 // 2^2
+    let bodyTimeScale: Int64 = 2 // 2^2
     
     let isBvB = false
     let isPvP = false
@@ -30,6 +30,9 @@ public struct World {
     var complexColliders = [Int64: ComplexCollider]()
     var convexColliders = [Int64: ConvexCollider]()
     var time: Int64
+    
+    private var landGrid = GridSpace()
+    private var isLandDirty = true
 
     public init(time: Int64) {
         self.time = time
@@ -37,24 +40,38 @@ public struct World {
     
     public mutating func iterate() {
         let timeScale = 10 - settings.timeScale
-        
-        var i = 0
 
         // update lands first
         
+        var i = 0
+
         while i < landList.items.count {
             var land = landList.items[i]
             if !land.velocity.isZero {
                 var shape = land.shape
                 shape.transform = shape.transform.apply(velocity: land.velocity, timeScale: timeScale)
                 shape.revalidateBoundary()
-                
+
                 land.shape = shape
                 landList.items[i] = land
-                
-                // TODO update colliders
+                isLandDirty = true
             }
+
             i += 1
+        }
+        
+        if isLandDirty {
+            var boxes = [Boundary](repeating: .zero, count: landList.items.count)
+            i = 0
+            while i < landList.items.count {
+                let land = landList.items[i]
+                boxes[i] = land.shape.boundry
+                i += 1
+            }
+            
+            landGrid.set(boxes: boxes)
+            
+            isLandDirty = false
         }
         
         // update players
@@ -82,15 +99,17 @@ public struct World {
                 
                 player.shape = shape
                 playerList.items[j] = player
-                
-                // TODO collide with land
-                
-                i = 0
-                while i < landList.items.count {
-                    self.collide(index: j, player, landList.items[i])
-                    i += 1
-                }
 
+                // colide with lands
+                
+                var indexMask = landGrid.collide(boundary: shape.boundry)
+                
+                while indexMask > 0 {
+                    let i = indexMask.next()
+                    let land = landList.items[i]
+                    self.collide(index: j, player, land)
+                }
+                
                 j += 1
             }
             
@@ -216,6 +235,7 @@ public struct World {
 
     public mutating func add(land: Land) {
         landList.add(land)
+        assert(landList.items.count < 64)
     }
     
     public func getBody(id: Int64) -> Body {
@@ -234,7 +254,7 @@ public struct World {
         let index = playerList.index(id: playerId)
         
         var shape = playerList.items[index].shape
-        shape.collider = Collider(boundry: BoundaryBox(radius: circleRadius), form: .circle, data: circleRadius)
+        shape.collider = Collider(boundry: Boundary(radius: circleRadius), form: .circle, data: circleRadius)
         shape.revalidateBoundary()
         playerList.items[index].shape = shape
     }
@@ -243,7 +263,7 @@ public struct World {
         let index = bulletList.index(id: bulletId)
         
         var shape = bulletList.items[index].shape
-        shape.collider = Collider(boundry: BoundaryBox(radius: circleRadius), form: .circle, data: circleRadius)
+        shape.collider = Collider(boundry: Boundary(radius: circleRadius), form: .circle, data: circleRadius)
         shape.revalidateBoundary()
         bulletList.items[index].shape = shape
     }
@@ -252,7 +272,7 @@ public struct World {
         let landId = landList.index(id: landId)
         
         var shape = landList.items[landId].shape
-        shape.collider = Collider(boundry: BoundaryBox(radius: circleRadius), form: .circle, data: circleRadius)
+        shape.collider = Collider(boundry: Boundary(radius: circleRadius), form: .circle, data: circleRadius)
         shape.revalidateBoundary()
         
         landList.items[landId].shape = shape
@@ -295,10 +315,16 @@ public struct World {
         let index = landList.index(id: landId)
         
         var shape = landList.items[index].shape
-        shape.transform = Transform(position: position, angle: angle)
-        shape.revalidateBoundary()
         
-        landList.items[index].shape = shape
+        let newTransform = Transform(position: position, angle: angle)
+        if shape.transform != newTransform {
+            shape.transform = newTransform
+            shape.revalidateBoundary()
+            
+            landList.items[index].shape = shape
+            
+            isLandDirty = true
+        }
     }
     
     // set velocity
