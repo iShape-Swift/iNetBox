@@ -248,6 +248,10 @@ public struct World {
         return landList.items[index]
     }
     
+    public func getConvexCollider(id: Int64) -> ConvexCollider {
+        convexColliders[id]!
+    }
+    
     // set collider
     
     public mutating func setPlayerCollider(circleRadius: FixFloat, playerId: Int64) {
