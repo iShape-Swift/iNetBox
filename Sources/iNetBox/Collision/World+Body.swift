@@ -14,26 +14,26 @@ extension World {
         guard contact.type != .outside else { return }
 
         let vA = a.velocity.linear
-        let normal = contact.normalA
+        let aNy = contact.normalA
         
-        let dN = vA.dotProduct(normal)
+        let aPy = vA.dotProduct(aNy)
         
-        guard dN < 0 else {
+        guard aPy < 0 else {
             return
         }
 
-        let ortho = FixVec(normal.y, -normal.x)
+        let aNx = FixVec(aNy.y, -aNy.x)
 
-        let dO = vA.dotProduct(ortho)
+        let aPx = vA.dotProduct(aNx)
         
-        let vN = normal * dN
-        let vO = ortho * dO
+        let vNy = aNy * aPy
+        let vNx = aNx * aPx
 
-//        let kb = max(a.material.bounce, b.material.bounce)
+        let kb = max(a.material.bounce, b.material.bounce)
         
-        let new_v = vO - vN
+        let newVa = vNx - kb * vNy
         var new_a = a
-        new_a.velocity = Velocity(linear: new_v, angular: a.velocity.angular)
+        new_a.velocity = Velocity(linear: newVa, angular: a.velocity.angular)
 
         switch a.type {
         case .player:

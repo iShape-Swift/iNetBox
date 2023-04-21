@@ -9,9 +9,10 @@ import iSpace
 
 public struct Material {
 
-    public static let normal = Material(bounce: .unit, friction: .unit)
+    public static let normal = Material(bounce: .half, friction: .unit, density: .unit)
     
     public let bounce: FixFloat
     public let friction: FixFloat
+    public let density: FixFloat
     
 }
