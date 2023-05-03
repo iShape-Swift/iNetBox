@@ -8,7 +8,7 @@
 import iSpace
 
 public struct ConvexCollider {
-
+    
     // in local parent cordinat system
     public let center: FixVec
     public let points: [FixVec]
@@ -79,6 +79,21 @@ public struct ConvexCollider {
         self.box = Boundary(points: points)
     }
     
+    public init(transform: Transform, collider: ConvexCollider) {
+        var pnts = [FixVec](repeating: .zero, count: collider.points.count)
+        var nmls = [FixVec](repeating: .zero, count: collider.normals.count)
+        for i in 0..<collider.points.count {
+            pnts[i] = transform.convert(point: collider.points[i])
+            nmls[i] = transform.convert(vector: collider.normals[i])
+        }
+        
+        self.points = pnts
+        self.normals = nmls
+        self.box = transform.convert(boundary: collider.box)
+        self.center = collider.center
+    }
+
+    
     // do not work correct with degenerate points
     public func collide(circle: CircleCollider) -> Contact {
 
@@ -129,9 +144,8 @@ public struct ConvexCollider {
         if separation < 0 {
             return Contact(
                 point: faceCenter,
-                normalB: n1,
-                radiusA: 0,
-                radiusB: circle.radius,
+                normal: n1,
+                penetration: 0,
                 type: .inside
             )
         }
@@ -148,9 +162,8 @@ public struct ConvexCollider {
 
             return Contact(
                 point: v1,
-                normalB: (circle.center - v1).normalize,
-                radiusA: 0,
-                radiusB: circle.radius,
+                normal: (circle.center - v1).normalize,
+                penetration: 0,
                 type: .collide
             )
         }
@@ -164,9 +177,8 @@ public struct ConvexCollider {
 
             return Contact(
                 point: v2,
-                normalB: (circle.center - v2).normalize,
-                radiusA: 0,
-                radiusB: circle.radius,
+                normal: (circle.center - v2).normalize,
+                penetration: 0,
                 type: .collide
             )
         }
@@ -181,11 +193,59 @@ public struct ConvexCollider {
         
         return Contact(
             point: m,
-            normalB: n1,
-            radiusA: 0,
-            radiusB: circle.radius,
+            normal: n1,
+            penetration: 0,
             type: .collide
         )
+    }
+
+    public func intersectsWith(other: ConvexCollider) -> Bool {
+        let polygons = [self, other]
+        
+        // Loop through both polygons (0 for self, 1 for other)
+        for i in 0..<2 {
+            let aPoly = polygons[i]
+            let bPoly = polygons[1 - i]
+            
+            let edgeCount = aPoly.points.count
+            
+            // For each edge of the current polygon
+            for edgeIndex in 0..<edgeCount {
+                
+                // Calculate the edge's normal vector (perpendicular vector)
+                let normal = aPoly.normals[edgeIndex]
+                
+                // Initialize minimum and maximum projection values for both polygons
+                var minProjectionCurrent = FixFloat.max
+                var maxProjectionCurrent = FixFloat.min
+                var minProjectionNext = FixFloat.max
+                var maxProjectionNext = FixFloat.min
+                
+                // Project all vertices of both polygons onto the normal vector's line (using the dot product)
+                for vertex in aPoly.points {
+                    let projection = normal.dotProduct(vertex)
+                    minProjectionCurrent = min(minProjectionCurrent, projection)
+                    maxProjectionCurrent = max(maxProjectionCurrent, projection)
+                }
+                
+                for vertex in bPoly.points {
+                    let projection = normal.dotProduct(vertex)
+                    minProjectionNext = min(minProjectionNext, projection)
+                    maxProjectionNext = max(maxProjectionNext, projection)
+                }
+                
+                // Calculate the separation between the two polygons
+                let separation = minProjectionNext - maxProjectionCurrent
+                
+                // If a positive separation is found, the polygons do not intersect
+                if separation > 0 {
+                    return false
+                }
+            }
+        }
+        
+        // If all the separations are negative (or zero), the polygons are intersecting
+        return true
     }
     
 }

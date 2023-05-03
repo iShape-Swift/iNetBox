@@ -13,9 +13,7 @@ public struct Transform {
     
     public let position: FixVec
     public let angle: FixFloat
-    
-    @usableFromInline
-    var rotator: RotationMatrix
+    public let rotator: FixVec
     
     @inlinable
     public init(position: FixVec, angle: FixFloat) {
@@ -24,39 +22,50 @@ public struct Transform {
         if angle != 0 {
             rotator = angle.radToFixAngle.rotator
         } else {
-            rotator = .init(sin: 0, cos: .unit)
+            rotator = FixVec(x: .unit, y: 0)
         }
     }
     
     @inlinable
-    init(position: FixVec, angle: FixFloat, rotator: RotationMatrix) {
+    public func convert(point: FixVec) -> FixVec {
+        convert(vector: point) + position
+    }
+    
+    @inlinable
+    public func convert(vector: FixVec) -> FixVec {
+        let x = (rotator.x * vector.x - rotator.y * vector.y) >> 10
+        let y = (rotator.y * vector.x + rotator.x * vector.y) >> 10
+        return FixVec(x, y)
+    }
+    
+    @inlinable
+    init(position: FixVec, angle: FixFloat, rotator: FixVec) {
         self.position = position
         self.angle = angle
         self.rotator = rotator
     }
+
+    @inlinable
+    public func convert(points: [FixVec]) -> [FixVec] {
+        var result = [FixVec]()
+        for p in points {
+            result.append(convert(point: p))
+        }
+        return result
+    }
+
     
     @inlinable
-    public func toLocal(point: FixVec) -> FixVec {
-        rotator.rotateForward(point: point - position)
-    }
-
-    @inlinable
-    public func toWorld(point: FixVec) -> FixVec {
-        rotator.rotateBack(point: point) + position
-    }
-
-    @inlinable
-    public func toLocal(vector: FixVec) -> FixVec {
-        rotator.rotateForward(point: vector)
-    }
-
-    @inlinable
-    public func toWorld(vector: FixVec) -> FixVec {
-        rotator.rotateBack(point: vector)
+    public func convert(vectors: [FixVec]) -> [FixVec] {
+        var result = [FixVec]()
+        for v in vectors {
+            result.append(convert(vector: v))
+        }
+        return result
     }
     
     @inlinable
-    public func toWorld(boundary: Boundary) -> Boundary {
+    public func convert(boundary: Boundary) -> Boundary {
         if angle == 0 {
             return boundary.translate(delta: position)
         } else {
@@ -65,10 +74,10 @@ public struct Transform {
             let a2 = FixVec(boundary.pMax.x, boundary.pMax.y)
             let a3 = FixVec(boundary.pMax.x, boundary.pMin.y)
             
-            let b0 = toWorld(point: a0)
-            let b1 = toWorld(point: a1)
-            let b2 = toWorld(point: a2)
-            let b3 = toWorld(point: a3)
+            let b0 = convert(point: a0)
+            let b1 = convert(point: a1)
+            let b2 = convert(point: a2)
+            let b3 = convert(point: a3)
             
             let minX = min(min(b0.x, b1.x), min(b2.x, b3.x))
             let minY = min(min(b0.y, b1.y), min(b2.y, b3.y))
@@ -80,12 +89,13 @@ public struct Transform {
         }
     }
     
+    
     @inlinable
-    public func toWorld(contact: Contact) -> Contact {
-        let point = toWorld(point: contact.point)
-        let normalA = toWorld(vector: contact.normalA)
+    public func convert(contact: Contact) -> Contact {
+        let point = convert(point: contact.point)
+        let normal = convert(vector: contact.normal)
         
-        return Contact(point: point, normalA: normalA, radiusA: contact.radiusA, radiusB: contact.radiusB, type: contact.type)
+        return Contact(point: point, normal: normal, penetration: contact.penetration, type: contact.type)
     }
     
     
@@ -101,6 +111,28 @@ public struct Transform {
             return Transform(position: p, angle: angle, rotator: rotator)
         }
     }
+
+    public func invert() -> Transform {
+        let x = (-rotator.x * position.x - rotator.y * position.y) >> 10
+        let y = ( rotator.y * position.x + rotator.x * position.y) >> 10
+        
+        return Transform(position: FixVec(x, y), angle: -angle, rotator: FixVec(rotator.x, -rotator.y))
+    }
+    
+    public static func convert(from b: Transform, to a: Transform) -> Transform {
+        let ang = b.angle - a.angle
+        let rot = ang.radToFixAngle.rotator
+        
+        let cosA = a.rotator.x
+        let sinA = a.rotator.y
+        
+        let dv = b.position - a.position
+
+        let x = (cosA * dv.x + sinA * dv.y) >> 10
+        let y = (cosA * dv.y - sinA * dv.x) >> 10
+        
+        return Transform(position: FixVec(x, y), angle: ang, rotator: rot)
+    }
     
 }
 
@@ -111,5 +143,4 @@ extension Transform: Equatable {
     public static func == (lhs: Transform, rhs: Transform) -> Bool {
         lhs.angle == rhs.angle && lhs.position == rhs.position
     }
-    
 }

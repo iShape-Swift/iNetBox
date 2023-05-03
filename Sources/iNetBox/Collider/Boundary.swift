@@ -102,6 +102,11 @@ public struct Boundary {
         }
         return true
     }
+    
+    @inlinable
+    public func isContain(point p: FixVec) -> Bool {
+        pMin.x <= p.x && p.x <= pMax.x && pMin.y <= p.y && p.y <= pMax.y
+    }
 
     @inlinable
     public func isCollideCircle(center: FixVec, radius: FixFloat) -> Bool {
@@ -112,6 +117,16 @@ public struct Boundary {
         let sqrDist = FixVec(cx, cy).sqrDistance(center)
 
         return sqrDist <= radius.sqr
+    }
+    
+    @inlinable
+    public func points() -> [FixVec] {
+        [
+            pMin,
+            FixVec(pMin.x, pMax.y),
+            pMax,
+            FixVec(pMax.x, pMin.y)
+        ]
     }
 
 }

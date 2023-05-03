@@ -14,7 +14,7 @@ extension World {
         guard contact.type != .outside else { return }
 
         let vA = a.velocity.linear
-        let aNy = contact.normalA
+        let aNy = contact.normal
         
         let aPy = vA.dotProduct(aNy)
         

@@ -20,9 +20,9 @@ extension World {
             case .circle:
                 return collide(circle: a, circle: b)
             case .convex:
-                return collide(convex: b, circle: a).swap()
+                return collide(convex: b, circle: a)
             case .complex:
-                return collide(complex: b, circle: a).swap()
+                return collide(complex: b, circle: a)
             case .empty:
                 return .outside
             }
@@ -66,13 +66,17 @@ extension World {
             return .outside
         }
         
+        let baTr = Transform.convert(from: b.transform, to: a.transform)
+        let pos = baTr.convert(point: b.transform.position)
+//        let pos = a.transform.rotator.rotateBack(point: b.transform.position - a.transform.position)
+        
         // convert to local coordinate
-        let pos = a.transform.toLocal(point: b.transform.position)
+//        let pos = a.transform.position - b.transform.position
         let circleB = CircleCollider(center: pos, radius: b.collider.data)
         
         let contact = convexA.collide(circle: circleB)
 
-        return a.transform.toWorld(contact: contact)
+        return a.transform.convert(contact: contact)
     }
     
     private func collide(complex a: Shape, circle b: Shape) -> Contact {

@@ -43,18 +43,14 @@ public struct CircleCollider {
 
             return Contact(
                 point: p,
-                normalA: dv.normalize,
-                radiusA: radius,
-                radiusB: circle.radius,
+                normal: dv.normalize, penetration: 0,
                 type: .collide
             )
         } else {
             let p = (ca + cb).half
             return Contact(
                 point: p,
-                normalA: .zero,
-                radiusA: radius,
-                radiusB: circle.radius,
+                normal: .zero, penetration: 0,
                 type: .inside
             )
         }

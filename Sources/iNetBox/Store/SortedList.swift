@@ -57,7 +57,7 @@ extension Array where Element == Int64 {
         var right = count - 1
         
         var j = -1
-        var i = (left + right) / 2
+        var i = right >> 1
         var x = self[i]
         
         while i != j {
@@ -91,7 +91,7 @@ extension Array where Element == Int64 {
         var right = count - 1
 
         var j = -1
-        var i = (left + right) / 2
+        var i = right >> 1
         var x = self[i]
         
         while i != j {

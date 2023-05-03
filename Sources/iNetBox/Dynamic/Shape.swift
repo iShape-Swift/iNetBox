@@ -16,7 +16,7 @@ public struct Shape {
     public var collider: Collider
     
     mutating func revalidateBoundary() {
-        boundry = transform.toWorld(boundary: collider.boundry)
+        boundry = transform.convert(boundary: collider.boundry)
     }
     
 }
